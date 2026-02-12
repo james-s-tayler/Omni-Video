@@ -423,6 +423,19 @@ bash tools/inference/inference_omni_v2v_1_3B.sh
 | `--sample_shift` | `5` | Noise schedule shift parameter |
 | `--sample_solver` | `unipc` | Sampling solver (unipc, ddim, euler) |
 
+## ComfyUI Integration
+
+Want to use OmniVideo2 in ComfyUI? Check out our comprehensive integration guide:
+
+📘 **[ComfyUI Integration Guide](COMFYUI_INTEGRATION.md)**
+
+The guide covers:
+- Custom node implementation for ComfyUI
+- Step-by-step installation instructions
+- Usage examples and workflows
+- Memory optimization strategies
+- Troubleshooting common issues
+
 ## Acknowledgements
 
 We sincerely thank the following teams for their outstanding contributions that made this project possible:
