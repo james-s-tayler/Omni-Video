@@ -387,17 +387,38 @@ class OmniVideo2VideoToVideo:
             model.high_noise_model.to(device)
     
     def _encode_video_to_latents(self, model, video, width, height, frame_num):
-        """Encode video frames to VAE latent space"""
-        # Convert ComfyUI video format to tensor
-        # Process through VAE encoder
-        # Return latent tensor
+        """
+        Encode video frames to VAE latent space.
+        
+        Implementation steps:
+        1. Convert ComfyUI video format (list of PIL Images or numpy arrays) to torch.Tensor
+           - Shape: [batch, channels, frames, height, width] or [frames, height, width, channels]
+        2. Resize/crop video to target resolution (width, height)
+        3. Sample or interpolate to exact frame_num frames
+        4. Normalize pixel values to [-1, 1] range
+        5. Move to GPU and convert to appropriate dtype (bfloat16)
+        6. Pass through model.vae.encode() to get latent representation
+        7. Return latent tensor with shape [batch, channels, latent_frames, latent_h, latent_w]
+        
+        Note: VAE spatial compression ratio is typically 8x (from vae_stride config)
+        """
         pass
     
     def _decode_latents_to_video(self, model, latents, fps):
-        """Decode VAE latents to video frames"""
-        # Decode latents through VAE
-        # Convert to ComfyUI video format
-        # Return video
+        """
+        Decode VAE latents to video frames.
+        
+        Implementation steps:
+        1. Ensure latents are on GPU with correct dtype
+        2. Pass through model.vae.decode() to get pixel space frames
+        3. Denormalize from [-1, 1] to [0, 255] range
+        4. Convert from torch.Tensor to numpy array or PIL Images
+        5. Ensure correct shape for ComfyUI video format
+        6. Optionally encode to video file with specified fps using imageio or cv2
+        7. Return in ComfyUI-compatible video format
+        
+        Note: Output shape should be [frames, height, width, channels] with uint8 dtype
+        """
         pass
 ```
 
@@ -444,12 +465,19 @@ class OmniVideo2TextToVideo:
                       negative_prompt="", sample_solver="unipc"):
         """
         Generate video from text using OmniVideo2 pipeline.
-        Similar to VideoToVideo but without source video conditioning.
+        
+        Implementation differences from VideoToVideo:
+        1. No source video encoding step - skip _encode_video_to_latents()
+        2. Set ar_vision_input = None in omni_model.generate() call
+        3. visual_emb can be None or use Qwen3-VL with text-only prompt
+        4. Pure text-to-video generation without visual conditioning
+        5. May need higher guidance scale (5.0) for better prompt adherence
+        
+        The rest of the pipeline (caption expansion, text encoding, diffusion,
+        VAE decoding) remains the same as VideoToVideo.
         """
-        # Implementation similar to VideoToVideo but:
-        # - No source video encoding
-        # - ar_vision_input = None
-        # - Pure text-to-video generation
+        # Similar structure to VideoToVideo.generate_video()
+        # Key difference: ar_vision_input=None in generate() call
         pass
 ```
 
