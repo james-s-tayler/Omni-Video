@@ -806,6 +806,77 @@ Your OmniVideo2 nodes should now appear in the node menu under the "OmniVideo2" 
    - 40-50 steps for best quality
    - Beyond 50 shows diminishing returns
 
+### Model Quantization and Compression
+
+**Note**: This is an advanced topic for users seeking to reduce model size and memory requirements further.
+
+#### PyTorch Quantization
+
+For ComfyUI integration, PyTorch-based quantization is recommended over GGUF format:
+
+**1. Dynamic Quantization** (Easiest):
+```python
+import torch
+
+# Quantize DiT model after loading
+model.high_noise_model = torch.quantization.quantize_dynamic(
+    model.high_noise_model, {torch.nn.Linear}, dtype=torch.qint8
+)
+```
+- Reduces model size by ~4x
+- Minimal code changes
+- Good for CPU inference or memory-constrained GPUs
+
+**2. bitsandbytes Quantization** (Recommended):
+```python
+from transformers import BitsAndBytesConfig
+
+# 8-bit quantization config
+quantization_config = BitsAndBytesConfig(
+    load_in_8bit=True,
+    llm_int8_threshold=6.0
+)
+
+# Apply when loading model
+# Reduces memory by ~2x with minimal quality loss
+```
+- Specifically designed for large transformer models
+- Better quality than naive quantization
+- Works well with CUDA GPUs
+
+**3. Specialized DiT Quantization**:
+For maximum efficiency with diffusion transformers, research-grade tools exist:
+- [ViDiT-Q](https://github.com/thu-nics/ViDiT-Q): W8A8, W4A8 quantization for video DiTs
+- [Q-DiT](https://arxiv.org/abs/2406.17343): Post-training quantization for diffusion transformers
+- [Q-VDiT](https://arxiv.org/abs/2505.22167): Quantization and distillation for video generation
+
+These require custom integration but can achieve 4-8x memory reduction with minimal quality loss.
+
+#### GGUF Format Conversion
+
+GGUF format is primarily designed for LLM inference and has limited support for video diffusion models:
+
+**Current Limitations**:
+- GGUF is optimized for text/image models, not video diffusion transformers
+- OmniVideo2's multi-component architecture (4 separate models) requires individual conversion
+- No mature tooling for video DiT → GGUF conversion pipeline
+- ComfyUI ecosystem doesn't yet support GGUF for video models
+
+**If You Want to Experiment**:
+1. Quantize individual models using ViDiT-Q or Q-DiT
+2. Convert using Hugging Face tools:
+   ```bash
+   python convert-hf-to-gguf.py --model quantized_model_dir \
+       --output model.gguf --quantization q5_0
+   ```
+3. Implement custom GGUF loader in ComfyUI node (requires significant work)
+
+**Recommendation**: For production use with ComfyUI, stick with:
+- CPU offloading strategies (already documented)
+- PyTorch quantization (bitsandbytes)
+- The smaller 1.3B model variant
+- GGUF conversion is experimental and not recommended at this time
+
 ---
 
 ## Troubleshooting
