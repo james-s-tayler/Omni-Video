@@ -885,11 +885,17 @@ These require custom integration but can achieve 4-8x memory reduction with mini
    - Use specialized quantization tools:
      - [ViDiT-Q](https://github.com/thu-nics/ViDiT-Q) for video DiT quantization
      - [Q-DiT](https://arxiv.org/abs/2406.17343) for post-training quantization
-   - Convert to GGUF:
+   - Convert to GGUF using scripts from [llama.cpp](https://github.com/ggerganov/llama.cpp):
      ```bash
-     python convert-hf-to-gguf.py --model ./high_noise_model \
+     # Download conversion script from llama.cpp repo
+     git clone https://github.com/ggerganov/llama.cpp
+     cd llama.cpp
+     pip install -r requirements.txt
+     
+     # Convert models
+     python convert-hf-to-gguf.py --model /path/to/high_noise_model \
          --output omnivideo2_high_noise_q4.gguf --quantization q4_0
-     python convert-hf-to-gguf.py --model ./low_noise_model \
+     python convert-hf-to-gguf.py --model /path/to/low_noise_model \
          --output omnivideo2_low_noise_q4.gguf --quantization q4_0
      ```
    
@@ -903,7 +909,9 @@ These require custom integration but can achieve 4-8x memory reduction with mini
    
    d. **Qwen3-VL**:
    - Vision-language models can be quantized separately
-   - May require custom conversion scripts
+   - Qwen models may have GGUF conversions available on Hugging Face
+   - Check [Hugging Face GGUF models](https://huggingface.co/models?library=gguf&search=qwen) for pre-converted versions
+   - If not available, conversion may require adapting llama.cpp scripts for vision models
 
 3. **Create ComfyUI GGUF Loader Node**:
    Modify the OmniVideo2ModelLoader node to support GGUF:
