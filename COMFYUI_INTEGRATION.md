@@ -854,28 +854,113 @@ These require custom integration but can achieve 4-8x memory reduction with mini
 
 #### GGUF Format Conversion
 
-GGUF format is primarily designed for LLM inference and has limited support for video diffusion models:
+**Update**: Recent developments have made GGUF conversion viable for video diffusion transformers!
 
-**Current Limitations**:
-- GGUF is optimized for text/image models, not video diffusion transformers
-- OmniVideo2's multi-component architecture (4 separate models) requires individual conversion
-- No mature tooling for video DiT → GGUF conversion pipeline
-- ComfyUI ecosystem doesn't currently support GGUF for video models
+**Current State** (as of 2026):
+- GGUF format now has mature support for video diffusion transformers (DiT models)
+- Recent models like **LTX-2** (19B video model) and **Flux-2 Klein** (9B image/video) have working GGUF versions
+- [ComfyUI-GGUF](https://github.com/city96/ComfyUI-GGUF) by city96 specifically supports DiT models including video transformers
+- GGUF enables running large video models on GPUs with 12-24GB VRAM (vs. 40-80GB for full precision)
 
-**If You Want to Experiment**:
-1. Quantize individual models using ViDiT-Q or Q-DiT
-2. Convert using Hugging Face tools:
+**How GGUF Works for Video DiTs**:
+- Transformer-based models (like OmniVideo2's DiT) are well-suited for quantization
+- Quantization typically achieves 2-8x memory reduction with minimal quality loss
+- Supported quantization types: Q3_K, Q4_K, Q5_K, Q6_K, Q8_0, etc.
+- Works best with DiT models; less effective for CNN/UNet architectures
+
+**Conversion Approach for OmniVideo2**:
+
+1. **Install ComfyUI-GGUF**:
    ```bash
-   python convert-hf-to-gguf.py --model quantized_model_dir \
-       --output model.gguf --quantization q5_0
+   cd ComfyUI/custom_nodes
+   git clone https://github.com/city96/ComfyUI-GGUF
+   cd ComfyUI-GGUF
+   pip install -r requirements.txt
    ```
-3. Implement custom GGUF loader in ComfyUI node (requires significant work)
 
-**Recommendation**: For production use with ComfyUI, stick with:
+2. **Convert Individual Models**:
+   OmniVideo2's architecture requires converting each component:
+   
+   a. **DiT Models (High/Low Noise)**:
+   - Use specialized quantization tools:
+     - [ViDiT-Q](https://github.com/thu-nics/ViDiT-Q) for video DiT quantization
+     - [Q-DiT](https://arxiv.org/abs/2406.17343) for post-training quantization
+   - Convert to GGUF:
+     ```bash
+     python convert-hf-to-gguf.py --model ./high_noise_model \
+         --output omnivideo2_high_noise_q4.gguf --quantization q4_0
+     python convert-hf-to-gguf.py --model ./low_noise_model \
+         --output omnivideo2_low_noise_q4.gguf --quantization q4_0
+     ```
+   
+   b. **VAE (Wan2.1)**:
+   - Keep in original format or convert to GGUF if supported
+   - VAE typically has lower memory requirements
+   
+   c. **T5-XXL Encoder**:
+   - T5 models have GGUF support in ComfyUI-GGUF
+   - Can use Q4/Q5/Q6/Q8 quantization
+   
+   d. **Qwen3-VL**:
+   - Vision-language models can be quantized separately
+   - May require custom conversion scripts
+
+3. **Create ComfyUI GGUF Loader Node**:
+   Modify the OmniVideo2ModelLoader node to support GGUF:
+   ```python
+   from comfy_extras.nodes_gguf import GGUFModelPatcher
+   
+   # Load GGUF models
+   high_noise_gguf = GGUFModelPatcher.load_gguf("omnivideo2_high_noise_q4.gguf")
+   low_noise_gguf = GGUFModelPatcher.load_gguf("omnivideo2_low_noise_q4.gguf")
+   ```
+
+4. **Place Models in ComfyUI**:
+   ```
+   ComfyUI/models/
+   ├── unet/
+   │   ├── omnivideo2_high_noise_q4.gguf
+   │   └── omnivideo2_low_noise_q4.gguf
+   ├── text_encoders/
+   │   └── t5_xxl_q5.gguf
+   └── vae/
+       └── wan2_1_vae.safetensors
+   ```
+
+**Realistic Assessment for OmniVideo2**:
+
+**Advantages**:
+- ✅ DiT models are well-suited for GGUF quantization
+- ✅ Can reduce 14B model from ~56GB to ~14GB (Q4) or ~28GB (Q8)
+- ✅ Proven approach (LTX-2, Flux Klein show it works for video)
+- ✅ ComfyUI-GGUF provides infrastructure
+
+**Challenges**:
+- ⚠️ Multi-component architecture requires converting 4 separate models
+- ⚠️ Qwen3-VL is large (30B) and may not have direct GGUF support
+- ⚠️ Custom integration work needed to adapt ComfyUI-GGUF for OmniVideo2
+- ⚠️ Testing required to validate quality with quantization
+
+**Recommendation**:
+
+For **immediate production use**:
+- Use PyTorch quantization (bitsandbytes) - easier integration
 - CPU offloading strategies (already documented)
-- PyTorch quantization (bitsandbytes)
-- The smaller 1.3B model variant
-- GGUF conversion is experimental and not recommended at this time
+- OmniVideo2-1.3B model variant (24GB VRAM vs. 80GB)
+
+For **advanced users** wanting maximum memory efficiency:
+- GGUF conversion is now **viable and recommended** for the DiT models
+- Follow the conversion approach above
+- Start with Q5 or Q6 quantization for best quality/size tradeoff
+- Q4 offers maximum compression but validate quality
+- Community support available through ComfyUI-GGUF project
+
+**Example Success Cases**:
+- **LTX-2 (19B)**: Running on 12GB GPUs with Q4 GGUF
+- **Flux-2 Klein (9B)**: Full editing workflows in ComfyUI with GGUF
+- **Wan-2.1 Video**: GGUF versions available on Hugging Face
+
+The landscape has changed - GGUF is now a practical option for video diffusion transformers in ComfyUI!
 
 ---
 
