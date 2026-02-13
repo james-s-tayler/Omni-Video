@@ -860,7 +860,7 @@ GGUF format is primarily designed for LLM inference and has limited support for 
 - GGUF is optimized for text/image models, not video diffusion transformers
 - OmniVideo2's multi-component architecture (4 separate models) requires individual conversion
 - No mature tooling for video DiT → GGUF conversion pipeline
-- ComfyUI ecosystem doesn't yet support GGUF for video models
+- ComfyUI ecosystem doesn't currently support GGUF for video models
 
 **If You Want to Experiment**:
 1. Quantize individual models using ViDiT-Q or Q-DiT
